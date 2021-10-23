@@ -12,6 +12,7 @@ import Linear.Quaternion
 import Linear.V2
 import Linear.V3
 import Optics
+import Optics.Lens
 
 tau = pi * 2
 
@@ -53,15 +54,20 @@ computeIrradiance = id
 
 theIrradianceCube n = map (map (map computeIrradiance)) (theNormalizedCube n)
 
-v3ToRGBF :: V3 Double -> PixelRGBF
-v3ToRGBF (V3 x y z) = PixelRGBF (realToFrac x) (realToFrac y) (realToFrac z)
+v3ToRGBF :: V3 Double -> PixelRGB8
+v3ToRGBF v3 =
+  let v3' = fmap (floor . max 0 . (* 255)) v3
+      V3 x y z = v3'
+   in PixelRGB8 x y z
 
 theIrradianceImages n = map (\square -> generateImage (\i j -> v3ToRGBF ((square !! i) !! j)) n n) (theIrradianceCube n)
 
-makeFileName :: Int -> FilePath 
+makeFileName :: Int -> FilePath
 makeFileName i = show i ++ ".png"
+
 someFunc :: IO ()
 someFunc = do
-    let images = theIrradianceImages 32
-    let aaa = iover each (\i a -> writeDynamicPng (makeFileName i) (ImageRGBF a)) images
-    sequence_ aaa
+  let images = theIrradianceImages 32
+  let aaa = iover each (\i a -> writePng (makeFileName i) a) images
+  bb <- sequence aaa
+  print bb
