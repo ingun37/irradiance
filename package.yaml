@@ -24,6 +24,7 @@ dependencies:
 - JuicyPixels
 - linear
 - optics
+- lens
 
 library:
   source-dirs: src

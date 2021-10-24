@@ -5,15 +5,15 @@ where
 
 import Codec.Picture
 import Codec.Picture.Types (generateImage)
+import Control.Lens ((^.))
 import Data.Ix
 import Data.Ratio
 import Linear.Metric
 import Linear.Quaternion
 import Linear.V2
 import Linear.V3
-import Optics
-import Optics.Lens
-
+import Optics (Each (each), iover, (%~), (&))
+import Data.Fixed
 tau = pi * 2
 
 divBy :: (Integral a, Integral b) => a -> b -> Double
@@ -49,8 +49,20 @@ theCube n = map ($ n) [pxSquare, nxSquare, pySquare, nySquare, pzSquare, nzSquar
 
 theNormalizedCube n = map (map (map normalize)) (theCube n)
 
+normalVToSpherical :: V3 Double -> V2 Double
+normalVToSpherical v =
+  let (V3 x y z) = v
+      polar = atan2 y x
+      azimuth = atan2 (norm (v ^. _xy)) z
+   in V2 polar azimuth
+
+sphericalToUV :: V2 Double -> V2 Double
+sphericalToUV = fmap (\x -> mod' x tau / tau)
+
 computeIrradiance :: V3 Double -> V3 Double
-computeIrradiance = id
+computeIrradiance v =
+  let uv = sphericalToUV $ normalVToSpherical v
+   in addZComp 0 uv
 
 theIrradianceCube n = map (map (map computeIrradiance)) (theNormalizedCube n)
 
