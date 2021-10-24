@@ -33,6 +33,7 @@ library
   build-depends:
       JuicyPixels
     , base >=4.7 && <5
+    , bytestring
     , lens
     , linear
     , optics
@@ -48,6 +49,7 @@ executable irradiance-exe
   build-depends:
       JuicyPixels
     , base >=4.7 && <5
+    , bytestring
     , irradiance
     , lens
     , linear
@@ -65,6 +67,7 @@ test-suite irradiance-test
   build-depends:
       JuicyPixels
     , base >=4.7 && <5
+    , bytestring
     , irradiance
     , lens
     , linear

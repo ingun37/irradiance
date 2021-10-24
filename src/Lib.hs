@@ -8,6 +8,7 @@ import Codec.Picture.HDR
 import Codec.Picture.Types (generateImage)
 import Control.Lens ((^.))
 import Control.Monad
+import qualified Data.ByteString as B
 import Data.Either
 import Data.Fixed
 import Data.Ix
@@ -32,7 +33,7 @@ pairs n = numbers n & each %~ (\x -> numbers n & each %~ V2 x)
 
 addZComp z (V2 x y) = V3 x y z
 
-nzSquare n = map (map (addZComp (-1))) (pairs n)
+nzSquare n = map (map (addZComp (-0.5))) (pairs n)
 
 rotSquare i j k r n =
   let q = axisAngle (V3 i j k) r :: Quaternion Double
@@ -53,28 +54,46 @@ theCube n = map ($ n) [pxSquare, nxSquare, pySquare, nySquare, pzSquare, nzSquar
 
 theNormalizedCube n = map (map (map normalize)) (theCube n)
 
+withInTau x = mod' (x + tau) tau
+
 normalVToSpherical :: V3 Double -> V2 Double
 normalVToSpherical v =
   let (V3 x y z) = v
       polar = atan2 y x
       azimuth = atan2 (norm (v ^. _xy)) z
-   in V2 polar azimuth
+   in V2 (withInTau polar) (withInTau azimuth)
 
 sphericalToUV :: V2 Double -> V2 Double
-sphericalToUV = fmap (\x -> mod' x tau / tau)
+sphericalToUV (V2 polar azimuth) = V2 (polar/tau) (azimuth/pi)
 
 computeIrradiance :: Image PixelRGBF -> V3 Double -> V3 Double
 computeIrradiance img v =
-  let uv = sphericalToUV $ normalVToSpherical v
+  let sph = normalVToSpherical v
+      uv = sphericalToUV sph
       w = imageWidth img
       h = imageHeight img
-      i = floor (uv ^. _x * fromIntegral w)
-      j = floor (uv ^. _y * fromIntegral h)
+      i = min (w-1) (floor (uv ^. _x * fromIntegral w))
+      j = min (h-1) (floor (uv ^. _y * fromIntegral h))
       px = pixelAt img i j
       (PixelRGBF r g b) = px
    in fmap realToFrac (V3 r g b)
+  -- in v
+  -- in V3 0 (sph^._y / pi) 0
 
-readHDR =
+theIrradianceCube img n = map (map (map (computeIrradiance img))) (theNormalizedCube n)
+
+v3ToRGBF :: V3 Double -> PixelRGB8
+v3ToRGBF v3 =
+  let v3' = fmap (floor . max 0 . min 255 . (* 255)) v3
+      V3 x y z = v3'
+   in PixelRGB8 x y z
+
+theIrradianceImages equirect n = map (\square -> generateImage (\i j -> v3ToRGBF ((square !! j) !! i)) n n) (theIrradianceCube equirect n)
+
+makeFileName :: Int -> FilePath
+makeFileName i = show i ++ ".png"
+
+readHDRBytes =
   fromRight undefined
     . ( decodeHDR
           >=> ( \x -> case x of
@@ -83,22 +102,11 @@ readHDR =
               )
       )
 
-theIrradianceCube img n = map (map (map (computeIrradiance img))) (theNormalizedCube n)
-
-v3ToRGBF :: V3 Double -> PixelRGB8
-v3ToRGBF v3 =
-  let v3' = fmap (floor . max 0 . (* 255)) v3
-      V3 x y z = v3'
-   in PixelRGB8 x y z
-
-theIrradianceImages equirect n = map (\square -> generateImage (\i j -> v3ToRGBF ((square !! i) !! j)) n n) (theIrradianceCube equirect n)
-
-makeFileName :: Int -> FilePath
-makeFileName i = show i ++ ".png"
-
 someFunc :: IO ()
 someFunc = do
-  let images = theIrradianceImages 32
+  imgBytes <- B.readFile "venetian_crossroads_1k.hdr"
+  let img = readHDRBytes imgBytes
+  let images = theIrradianceImages img 128
   let aaa = iover each (\i a -> writePng (makeFileName i) a) images
   bb <- sequence aaa
   print bb
