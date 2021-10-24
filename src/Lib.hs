@@ -69,11 +69,13 @@ theCube n = map ($ n) squareMakers
 
 theNormalizedCube n = map (map (map normalize)) (theCube n)
 
+theFeriHemi = fericalHemiSphere 30
+theFeriHemiLen = length theFeriHemi
+
 computeIrradiance :: Image PixelRGBF -> V3 Double -> V3 Double
 computeIrradiance img v =
   let aa = 0
       rotator = rotate (rotationFromAVectorToAnother (V3 0 1 0) v)
-      hemi = fericalHemiSphere 3
       radiances =
         map
           ( \fcoord ->
@@ -82,9 +84,9 @@ computeIrradiance img v =
                   polar = fcoord ^. _x
                in sampled ^* cos polar ^* sin polar
           )
-          hemi
-      irradiance = sumV radiances ^/ fromIntegral (length hemi)
-   in pi * irradiance
+          theFeriHemi
+      irradiance = sumV radiances ^/ fromIntegral theFeriHemiLen
+   in irradiance ^* pi
 
 -- hemi = map (sample img . rotator) (hemiSphere 10)
 -- sum = sumV hemi
@@ -96,16 +98,15 @@ computeIrradiance img v =
 
 theIrradianceCube img n = map (map (map (computeIrradiance img))) (theNormalizedCube n)
 
-v3ToRGBF :: V3 Double -> PixelRGB8
+v3ToRGBF :: V3 Double -> PixelRGBF
 v3ToRGBF v3 =
-  let v3' = fmap (floor . max 0 . min 255 . (* 255)) v3
-      V3 x y z = v3'
-   in PixelRGB8 x y z
+  let V3 x y z = realToFrac <$> v3
+   in PixelRGBF x y z
 
 theIrradianceImages equirect n = map (\square -> generateImage (\i j -> v3ToRGBF ((square !! j) !! i)) n n) (theIrradianceCube equirect n)
 
 makeFileName :: Int -> FilePath
-makeFileName i = show (cubicals !! i) ++ ".png"
+makeFileName i = show (cubicals !! i) ++ ".hdr"
 
 readHDRBytes =
   fromRight undefined
@@ -120,7 +121,7 @@ someFunc :: IO ()
 someFunc = do
   imgBytes <- B.readFile "venetian_crossroads_1k.hdr"
   let img = readHDRBytes imgBytes
-  let images = theIrradianceImages img 128
-  let aaa = iover each (\i a -> writePng (makeFileName i) a) images
+  let images = theIrradianceImages img 64
+  let aaa = iover each (\i a -> writeHDR (makeFileName i) a) images
   bb <- sequence aaa
   print bb

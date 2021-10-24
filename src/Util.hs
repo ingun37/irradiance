@@ -30,18 +30,18 @@ rotationFromAVectorToAnother v1 v2 =
       q = Quaternion w c
    in normalize q
 
--- fericalHemiSphere :: Int -> [V2 Double]
--- fericalHemiSphere step = do
---   let circumStep = step * 4
---   let delta = tau / fromIntegral circumStep
---   i <- range (0, circumStep -1)
---   let azimuth = fromIntegral i * delta
---   j <- range (0, step -1)
---   let polar = fromIntegral j * delta
---   return $ V2 polar azimuth
-
 fericalHemiSphere :: Int -> [V2 Double]
-fericalHemiSphere step = [V2 0.1 0, V2 0.1 quarter, V2 0.1 pi, V2 0.1 (pi + quarter)]
+fericalHemiSphere step = do
+  let circumStep = step * 4
+  let delta = tau / fromIntegral circumStep
+  i <- range (0, circumStep -1)
+  let azimuth = fromIntegral i * delta
+  j <- range (0, step -1)
+  let polar = fromIntegral j * delta
+  return $ V2 polar azimuth
+
+-- fericalHemiSphere :: Int -> [V2 Double]
+-- fericalHemiSphere step = [V2 0 0] -- [V2 0.1 0, V2 0.1 quarter, V2 0.1 pi, V2 0.1 (pi + quarter)]
 
 sphericalToUV :: V2 Double -> V2 Double
 sphericalToUV (V2 polar azimuth) = V2 (polar / tau) (azimuth / pi)
