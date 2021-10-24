@@ -4,8 +4,6 @@ module Lib
 where
 
 import Codec.Picture
-import Codec.Picture.HDR
-import Codec.Picture.Types (generateImage)
 import Control.Lens ((^.))
 import Control.Monad
 import qualified Data.ByteString as B
