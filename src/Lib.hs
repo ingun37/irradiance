@@ -4,18 +4,18 @@ module Lib
 where
 
 import Codec.Picture
-import Control.Lens ((^.), set)
+import Control.Lens (set, (^.))
 import Control.Monad
 import qualified Data.ByteString as B
 import Data.Either
-import Data.Fixed
 import Data.Ix
-import Data.Ratio
 import Linear.Metric
 import Linear.Quaternion
 import Linear.V2
 import Linear.V3
+import Linear.Vector
 import Optics (Each (each), iover, (%~), (&))
+import Util
 
 tau = pi * 2
 
@@ -50,18 +50,6 @@ nzSquare = rotSquare pxSquare 0 0 1 quarter
 
 nxSquare = rotSquare nzSquare 0 0 1 quarter
 
--- pySquare = rotSquare nySquare 1 0 0 (-pi)
-
--- -- nxSquare = rotSquare 0 1 0 (tau / 4)
-
--- pxSquare = rotSquare pzSquare 0 1 0 (tau / 4)
--- nzSquare = rotSquare pxSquare 0 1 0 (tau / 4)
--- nxSquare = rotSquare nzSquare 0 1 0 (tau / 4)
-
--- -- pySquare = rotSquare 1 0 0 (tau / 4)
-
--- -- nySquare = rotSquare 1 0 0 (- tau / 4)
-
 data Cubical = Px | Nx | Py | Ny | Pz | Nz deriving (Show)
 
 cubicals = [Px, Nx, Py, Ny, Pz, Nz]
@@ -81,50 +69,27 @@ theCube n = map ($ n) squareMakers
 
 theNormalizedCube n = map (map (map normalize)) (theCube n)
 
-withInTau x = mod' (x + tau) tau
-
-normalVToSpherical :: V3 Double -> V2 Double
-normalVToSpherical v =
-  let (V3 x y z) = v
-      polar = atan2 y x
-      azimuth = atan2 (norm (v ^. _xy)) z
-   in V2 (withInTau polar) (withInTau azimuth)
-
-sphericalToUV :: V2 Double -> V2 Double
-sphericalToUV (V2 polar azimuth) = V2 (polar / tau) (azimuth / pi)
-
-hemiSphere :: Int -> [V3 Double]
-hemiSphere step = do
-  let circumStep = step * 4;
-  let delta = tau / fromIntegral circumStep
-  i <- range (0, circumStep -1)
-  let phi = fromIntegral i * delta
-  j <- range (0,step -1)
-  let theta = fromIntegral j * delta
-  let tangentSample = V3 (sin theta * cos phi) (sin theta * sin phi) (cos theta)
-  return tangentSample
-
-sample :: Image PixelRGBF -> V3 Double -> V3 Double
-sample img v =
-  let sph = normalVToSpherical v
-      uv = sphericalToUV sph
-      w = imageWidth img
-      h = imageHeight img
-      i = min (w -1) (floor (uv ^. _x * fromIntegral w))
-      j = min (h -1) (floor (uv ^. _y * fromIntegral h))
-      px = pixelAt img i j
-      (PixelRGBF r g b) = px
-   in fmap realToFrac (V3 r g b)
-
-rotationFromAVectorToAnother :: V3 Double -> V3 Double -> Quaternion Double
-rotationFromAVectorToAnother v1 v2 =
-  let c = cross v1 v2
-      w = dot v1 v2 + 1
-      q = Quaternion w c
-  in normalize q
-
 computeIrradiance :: Image PixelRGBF -> V3 Double -> V3 Double
-computeIrradiance img v = sample img (rotate (rotationFromAVectorToAnother (V3 0 1 0) v) (V3 0 1 0))
+computeIrradiance img v =
+  let aa = 0
+      rotator = rotate (rotationFromAVectorToAnother (V3 0 1 0) v)
+      hemi = fericalHemiSphere 3
+      radiances =
+        map
+          ( \fcoord ->
+              let vec = rotator (fericalToVec fcoord)
+                  sampled = sampleEquirectWithNormalVector img vec
+                  polar = fcoord ^. _x
+               in sampled ^* cos polar ^* sin polar
+          )
+          hemi
+      irradiance = sumV radiances ^/ fromIntegral (length hemi)
+   in pi * irradiance
+
+-- hemi = map (sample img . rotator) (hemiSphere 10)
+-- sum = sumV hemi
+-- average = sum ^/ fromIntegral (length hemi)
+-- sampleEquirectWithNormalVector img $ 12 *^ (rotate (rotationFromAVectorToAnother (V3 0 1 0) v) (V3 0 1 0))
 
 -- in v
 -- in V3 0 (sph^._y / pi) 0
