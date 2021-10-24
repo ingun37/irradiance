@@ -4,8 +4,12 @@ module Lib
 where
 
 import Codec.Picture
+import Codec.Picture.HDR
 import Codec.Picture.Types (generateImage)
 import Control.Lens ((^.))
+import Control.Monad
+import Data.Either
+import Data.Fixed
 import Data.Ix
 import Data.Ratio
 import Linear.Metric
@@ -13,7 +17,7 @@ import Linear.Quaternion
 import Linear.V2
 import Linear.V3
 import Optics (Each (each), iover, (%~), (&))
-import Data.Fixed
+
 tau = pi * 2
 
 divBy :: (Integral a, Integral b) => a -> b -> Double
@@ -59,12 +63,27 @@ normalVToSpherical v =
 sphericalToUV :: V2 Double -> V2 Double
 sphericalToUV = fmap (\x -> mod' x tau / tau)
 
-computeIrradiance :: V3 Double -> V3 Double
-computeIrradiance v =
+computeIrradiance :: Image PixelRGBF -> V3 Double -> V3 Double
+computeIrradiance img v =
   let uv = sphericalToUV $ normalVToSpherical v
-   in addZComp 0 uv
+      w = imageWidth img
+      h = imageHeight img
+      i = floor (uv ^. _x * fromIntegral w)
+      j = floor (uv ^. _y * fromIntegral h)
+      px = pixelAt img i j
+      (PixelRGBF r g b) = px
+   in fmap realToFrac (V3 r g b)
 
-theIrradianceCube n = map (map (map computeIrradiance)) (theNormalizedCube n)
+readHDR =
+  fromRight undefined
+    . ( decodeHDR
+          >=> ( \x -> case x of
+                  ImageRGBF i -> Right i
+                  _ -> undefined
+              )
+      )
+
+theIrradianceCube img n = map (map (map (computeIrradiance img))) (theNormalizedCube n)
 
 v3ToRGBF :: V3 Double -> PixelRGB8
 v3ToRGBF v3 =
@@ -72,7 +91,7 @@ v3ToRGBF v3 =
       V3 x y z = v3'
    in PixelRGB8 x y z
 
-theIrradianceImages n = map (\square -> generateImage (\i j -> v3ToRGBF ((square !! i) !! j)) n n) (theIrradianceCube n)
+theIrradianceImages equirect n = map (\square -> generateImage (\i j -> v3ToRGBF ((square !! i) !! j)) n n) (theIrradianceCube equirect n)
 
 makeFileName :: Int -> FilePath
 makeFileName i = show i ++ ".png"
