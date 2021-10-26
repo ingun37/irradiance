@@ -10,7 +10,7 @@ module Util
 where
 
 import Codec.Picture
-import Control.Lens
+-- import Control.Lens
 import Data.Fixed
 import Data.Ix
 import Linear.Metric
@@ -62,7 +62,7 @@ vecToSpherical :: V3 Double -> V2 Double
 vecToSpherical v =
   let (V3 x y z) = v
       polar = atan2 y x
-      azimuth = atan2 (norm (v ^. _xy)) z
+      azimuth = atan2 (norm (V2 x y)) z
    in V2 (withInTau polar) (withInTau azimuth)
 
 sampleEquirectWithNormalVector :: Image PixelRGBF -> V3 Double -> V3 Double
@@ -71,8 +71,9 @@ sampleEquirectWithNormalVector img v =
       uv = sphericalToUV sph
       w = imageWidth img
       h = imageHeight img
-      i = min (w -1) (floor (uv ^. _x * fromIntegral w))
-      j = min (h -1) (floor (uv ^. _y * fromIntegral h))
+      (V2 x y) = uv
+      i = min (w -1) (floor (x * fromIntegral w))
+      j = min (h -1) (floor (y * fromIntegral h))
       px = pixelAt img i j
       (PixelRGBF r g b) = px
    in fmap realToFrac (V3 r g b)

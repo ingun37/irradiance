@@ -5,7 +5,7 @@ module Lib
 where
 
 import Codec.Picture
-import Control.Lens (set, (^.))
+-- import Control.Lens (set, (^.))
 import Control.Monad
 import qualified Data.ByteString as B
 import Data.Either
@@ -88,7 +88,8 @@ computeIrradiance img v =
           ( \fcoord ->
               let vec = rotator (fericalToVec fcoord)
                   sampled = sampleEquirectWithNormalVector img vec
-                  polar = fcoord ^. _x
+                  (V2 fcoordX fcoordY) = fcoord
+                  polar = fcoordX
                in sampled ^* cos polar ^* sin polar
           )
           theFeriHemi
