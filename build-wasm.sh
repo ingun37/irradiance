@@ -1,2 +1,3 @@
-mkdir wasm-out
-ahc-link --input-hs Wasm.hs --browser --export-function=rotatedHemisphere --output-directory wasm-out --ghc-option -isrc
+#!/usr/bin/env zsh
+python3 gen.py
+docker run -it --rm -v $(pwd):/workspace -w /workspace terrorjack/asterius ./build-wasm.sh
