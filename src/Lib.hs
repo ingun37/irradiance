@@ -1,5 +1,6 @@
 module Lib
   ( someFunc,
+    rotatedHemisphere,
   )
 where
 
@@ -70,7 +71,13 @@ theCube n = map ($ n) squareMakers
 theNormalizedCube n = map (map (map normalize)) (theCube n)
 
 theFeriHemi = fericalHemiSphere 30
+
 theFeriHemiLen = length theFeriHemi
+
+rotatedHemisphere segments v =
+  let rotator = rotate (rotationFromAVectorToAnother (V3 0 1 0) v)
+      hemi = fericalHemiSphere segments
+   in map (rotator . fericalToVec) hemi
 
 computeIrradiance :: Image PixelRGBF -> V3 Double -> V3 Double
 computeIrradiance img v =

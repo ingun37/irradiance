@@ -27,6 +27,7 @@ library
   exposed-modules:
       Lib
       Util
+      Wasm
   other-modules:
       Paths_irradiance
   hs-source-dirs:
