@@ -26,6 +26,7 @@ dependencies:
 - optics
 - lens
 - bytestring
+- binary
 
 library:
   source-dirs: src

@@ -6,8 +6,12 @@ def importAsterius(str):
     return re.sub(r'^import(.+)$', r'import Asterius.Types\nimport Asterius.ByteString\nimport\1', str, 1, re.MULTILINE)
 def uncomment(str):
     return re.sub(r'^-- ', '', str, 0, re.MULTILINE)
+
+def comment_out(str):
+    return re.sub(r'(.+)-- comment out$', r'-- \1', str, 0, re.MULTILINE)
+
 with open("src/Wasm.hs", "r") as src_file:
     src = src_file.read()
-    modified = uncomment(src)
+    modified = comment_out(uncomment(changeModuleName(src)))
     with open("Wasm.hs", "w") as dst_file:
         dst_file.write(modified)

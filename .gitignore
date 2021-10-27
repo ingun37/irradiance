@@ -1,2 +1,6 @@
 .stack-work/
 *~
+Wasm.hs
+*.hi
+*.o
+wasm-out
