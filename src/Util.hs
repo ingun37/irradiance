@@ -1,11 +1,11 @@
 module Util
   ( rotationFromAVectorToAnother,
     sphericalToUV,
-    fericalHemiSphere,
-    sphericalToVec,
+    sphericalHemiSphere,
+    sphericalToPhysicsCoord,
     vecToSpherical,
     sampleEquirectWithNormalVector,
-    fericalToVec
+    physicsCoord2GraphicsCoord
   )
 where
 
@@ -32,8 +32,8 @@ rotationFromAVectorToAnother v1' v2' =
       q = Quaternion w c
    in normalize q
 
-fericalHemiSphere :: Int -> [V2 Double]
-fericalHemiSphere step = do
+sphericalHemiSphere :: Int -> [V2 Double]
+sphericalHemiSphere step = do
   let circumStep = step * 4
   let delta = tau / fromIntegral circumStep
   i <- range (0, circumStep -1)
@@ -42,19 +42,17 @@ fericalHemiSphere step = do
   let polar = fromIntegral j * delta
   return $ V2 polar azimuth
 
--- fericalHemiSphere :: Int -> [V2 Double]
--- fericalHemiSphere step = [V2 0 0] -- [V2 0.1 0, V2 0.1 quarter, V2 0.1 pi, V2 0.1 (pi + quarter)]
+-- sphericalHemiSphere :: Int -> [V2 Double]
+-- sphericalHemiSphere step = [V2 0 0] -- [V2 0.1 0, V2 0.1 quarter, V2 0.1 pi, V2 0.1 (pi + quarter)]
 
 sphericalToUV :: V2 Double -> V2 Double
 sphericalToUV (V2 polar azimuth) = V2 (polar / tau) (azimuth / pi)
 
-fericalToVec :: V2 Double -> V3 Double
-fericalToVec v =
-  let (V3 x y z) = sphericalToVec v
-   in V3 y z x
+physicsCoord2GraphicsCoord :: V3 Double -> V3 Double
+physicsCoord2GraphicsCoord (V3 x y z) = V3 y z x
 
-sphericalToVec :: V2 Double -> V3 Double
-sphericalToVec (V2 polar azimuth) = V3 (sin polar * cos azimuth) (sin azimuth * sin polar) (cos polar)
+sphericalToPhysicsCoord :: V2 Double -> V3 Double
+sphericalToPhysicsCoord (V2 polar azimuth) = V3 (sin polar * cos azimuth) (sin azimuth * sin polar) (cos polar)
 
 withInTau x = mod' (x + tau) tau
 

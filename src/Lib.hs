@@ -70,14 +70,14 @@ theCube n = map ($ n) squareMakers
 
 theNormalizedCube n = map (map (map normalize)) (theCube n)
 
-theFeriHemi = fericalHemiSphere 30
+theFeriHemi = sphericalHemiSphere 30
 
 theFeriHemiLen = length theFeriHemi
 
 rotatedHemisphere segments v =
   let rotator = rotate (rotationFromAVectorToAnother (V3 0 1 0) v)
-      hemi = fericalHemiSphere segments
-   in map (rotator . fericalToVec) hemi
+      hemi = sphericalHemiSphere segments
+   in map (rotator . physicsCoord2GraphicsCoord . sphericalToPhysicsCoord) hemi
 
 computeIrradiance :: Image PixelRGBF -> V3 Double -> V3 Double
 computeIrradiance img v =
@@ -85,10 +85,10 @@ computeIrradiance img v =
       rotator = rotate (rotationFromAVectorToAnother (V3 0 1 0) v)
       radiances =
         map
-          ( \fcoord ->
-              let vec = rotator (fericalToVec fcoord)
+          ( \scoord ->
+              let vec = rotator ((physicsCoord2GraphicsCoord . sphericalToPhysicsCoord) scoord)
                   sampled = sampleEquirectWithNormalVector img vec
-                  (V2 fcoordX fcoordY) = fcoord
+                  (V2 fcoordX fcoordY) = scoord
                   polar = fcoordX
                in sampled ^* cos polar ^* sin polar
           )
