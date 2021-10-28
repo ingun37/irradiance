@@ -11,5 +11,5 @@ main :: IO ()
 main = do
   let toV = V3 1 1 (-1)
   let rotator = rotate (rotationFromAVectorToAnother (V3 0 1 0) toV)
-  let aaa = rotator . fericalToVec <$> fericalHemiSphere 10
+  let aaa = rotator . fericalToVec <$> sphericalHemiSphere 10
   traverse_ printv aaa
