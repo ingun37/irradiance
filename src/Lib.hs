@@ -3,8 +3,8 @@
 module Lib
   ( rotatedHemisphere,
     readHDRBytes,
-    theIrradianceImages,
-    cubicals
+    cubicals,
+    computeIrradiance
   )
 where
 
@@ -76,11 +76,7 @@ squareMakers = map mapIntToSquare cubicals
 
 theCube n = map ($ n) squareMakers
 
-theNormalizedCube n = map (map (map normalize)) (theCube n)
-
-theFeriHemi = sphericalHemiSphere 30
-
-theFeriHemiLen = length theFeriHemi
+normalizedV3Cube n = map (map (map normalize)) (theCube n)
 
 radianceWeightOfPolarAngle x = cos x * sin x
 
@@ -94,40 +90,39 @@ rotatedHemisphere segments v =
          in V4 x y z w
    in map f hemi
 
-computeIrradiance :: Image PixelRGBF -> V3 Double -> V3 Double
-computeIrradiance img v =
-  let aa = 0
+computeIrradiance :: Int -> Image PixelRGBF -> V3 Double -> V3 Double
+computeIrradiance n img v =
+  let hemi = sphericalHemiSphere n
+      hemiLen = length hemi
       rotator = rotate (rotationFromAVectorToAnother (V3 0 1 0) v)
       radiances =
         map
           ( \scoord ->
               let vec = rotator ((physicsCoord2GraphicsCoord . sphericalToPhysicsCoord) scoord)
-                  sampled = sampleEquirectWithNormalVector img vec
+                  sampled = sampleEquirect img vec
                   (V2 fcoordX fcoordY) = scoord
                   polar = fcoordX
                in sampled ^* cos polar ^* sin polar
           )
-          theFeriHemi
-      irradiance = sumV radiances ^/ fromIntegral theFeriHemiLen
+          hemi
+      irradiance = sumV radiances ^/ fromIntegral hemiLen
    in irradiance ^* pi
 
 -- hemi = map (sample img . rotator) (hemiSphere 10)
 -- sum = sumV hemi
 -- average = sum ^/ fromIntegral (length hemi)
--- sampleEquirectWithNormalVector img $ 12 *^ (rotate (rotationFromAVectorToAnother (V3 0 1 0) v) (V3 0 1 0))
+-- sampleEquirect img $ 12 *^ (rotate (rotationFromAVectorToAnother (V3 0 1 0) v) (V3 0 1 0))
 
 -- in v
 -- in V3 0 (sph^._y / pi) 0
 
-theIrradianceCube img n = map (map (map (computeIrradiance img))) (theNormalizedCube n)
 
 v3ToRGBF :: V3 Double -> PixelRGBF
 v3ToRGBF v3 =
   let V3 x y z = realToFrac <$> v3
    in PixelRGBF x y z
 
-theIrradianceImages equirect n = map (\square -> generateImage (\i j -> v3ToRGBF ((square !! j) !! i)) n n) (theIrradianceCube equirect n)
-
+convertLinearToImage n square = generateImage (\i j -> v3ToRGBF ((square !! j) !! i)) n n
 
 readHDRBytes =
   fromRight undefined

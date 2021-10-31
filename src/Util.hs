@@ -4,7 +4,7 @@ module Util
     sphericalHemiSphere,
     sphericalToPhysicsCoord,
     vecToSpherical,
-    sampleEquirectWithNormalVector,
+    sampleEquirect,
     physicsCoord2GraphicsCoord
   )
 where
@@ -63,8 +63,8 @@ vecToSpherical v =
       azimuth = atan2 (norm (V2 x y)) z
    in V2 (withInTau polar) (withInTau azimuth)
 
-sampleEquirectWithNormalVector :: Image PixelRGBF -> V3 Double -> V3 Double
-sampleEquirectWithNormalVector img v =
+sampleEquirect :: Image PixelRGBF -> V3 Double -> V3 Double
+sampleEquirect img v =
   let sph = vecToSpherical v
       uv = sphericalToUV sph
       w = imageWidth img
