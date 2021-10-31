@@ -4,7 +4,8 @@ module Lib
   ( rotatedHemisphere,
     readHDRBytes,
     cubicals,
-    computeIrradiance
+    computeIrradiance,
+    theConvert
   )
 where
 
@@ -132,3 +133,9 @@ readHDRBytes =
                   _ -> undefined
               )
       )
+
+theConvert cubeMapSize hdrBytes strategy =
+  let v3Cube = normalizedV3Cube cubeMapSize
+      img = readHDRBytes hdrBytes
+      v3Cube' = map (map (map (strategy img))) v3Cube
+  in map (convertLinearToImage cubeMapSize) v3Cube'

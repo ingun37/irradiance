@@ -4,3 +4,9 @@ Wasm.hs
 *.hi
 *.o
 wasm-out
+Nx.hdr
+Ny.hdr
+Nz.hdr
+Px.hdr
+Py.hdr
+Pz.hdr
