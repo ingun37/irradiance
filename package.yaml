@@ -28,6 +28,7 @@ dependencies:
 - bytestring
 - binary
 - bson
+- text
 
 library:
   source-dirs: src

@@ -5,12 +5,15 @@ module Lib
     readHDRBytes,
     cubicals,
     computeIrradiance,
-    theConvert
+    convertToCubeMap,
   )
 where
 
 import Codec.Picture
+import Codec.Picture.Types
+-- import Optics (Each (each), iover, (%~), (&))
 
+import "lens" Control.Lens
 import Control.Monad
 import qualified Data.ByteString as B
 import Data.Either
@@ -21,9 +24,8 @@ import Linear.V2
 import Linear.V3
 import Linear.V4
 import Linear.Vector
--- import Optics (Each (each), iover, (%~), (&))
 import Util
-import "lens" Control.Lens
+import Codec.Picture.Types (gammaCorrection, toneMapping)
 
 tau = pi * 2
 
@@ -117,7 +119,6 @@ computeIrradiance n img v =
 -- in v
 -- in V3 0 (sph^._y / pi) 0
 
-
 v3ToRGBF :: V3 Double -> PixelRGBF
 v3ToRGBF v3 =
   let V3 x y z = realToFrac <$> v3
@@ -134,8 +135,9 @@ readHDRBytes =
               )
       )
 
-theConvert cubeMapSize hdrBytes strategy =
+convertToCubeMap strategy cubeMapSize hdrBytes =
   let v3Cube = normalizedV3Cube cubeMapSize
       img = readHDRBytes hdrBytes
       v3Cube' = map (map (map (strategy img))) v3Cube
-  in map (convertLinearToImage cubeMapSize) v3Cube'
+   in map (convertLinearToImage cubeMapSize) v3Cube'
+
