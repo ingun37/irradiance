@@ -27,6 +27,7 @@ dependencies:
 - lens
 - bytestring
 - binary
+- bson
 
 library:
   source-dirs: src

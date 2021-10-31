@@ -1,11 +1,15 @@
+{-# LANGUAGE PackageImports #-}
+
 module Lib
-  ( someFunc,
-    rotatedHemisphere,
+  ( rotatedHemisphere,
+    readHDRBytes,
+    theIrradianceImages,
+    cubicals
   )
 where
 
 import Codec.Picture
--- import Control.Lens (set, (^.))
+
 import Control.Monad
 import qualified Data.ByteString as B
 import Data.Either
@@ -14,9 +18,11 @@ import Linear.Metric
 import Linear.Quaternion
 import Linear.V2
 import Linear.V3
+import Linear.V4
 import Linear.Vector
-import Optics (Each (each), iover, (%~), (&))
+-- import Optics (Each (each), iover, (%~), (&))
 import Util
+import "lens" Control.Lens
 
 tau = pi * 2
 
@@ -26,9 +32,11 @@ divBy y x = fromIntegral x / fromIntegral y
 consequ :: Int -> [Int]
 consequ n = range (0, n -1)
 
-numbers n = consequ n & each %~ divBy n & each %~ subtract 0.5
+-- numbers n = consequ n & each %~ divBy n & each %~ subtract 0.5
+numbers n = map (subtract 0.5 . divBy n) (consequ n)
 
-pairs n = numbers n & each %~ (\x -> reverse $ numbers n & each %~ V2 x)
+-- pairs n = numbers n & each %~ (\x -> reverse $ numbers n & each %~ V2 x)
+pairs n = map (\x -> reverse $ map (V2 x) (numbers n)) (numbers n)
 
 addZComp z (V2 x y) = V3 x y z
 
@@ -74,10 +82,17 @@ theFeriHemi = sphericalHemiSphere 30
 
 theFeriHemiLen = length theFeriHemi
 
+radianceWeightOfPolarAngle x = cos x * sin x
+
 rotatedHemisphere segments v =
   let rotator = rotate (rotationFromAVectorToAnother (V3 0 1 0) v)
       hemi = sphericalHemiSphere segments
-   in map (rotator . physicsCoord2GraphicsCoord . sphericalToPhysicsCoord) hemi
+      f = \radianceSphericalCoord ->
+        let (V3 x y z) = rotator $ physicsCoord2GraphicsCoord $ sphericalToPhysicsCoord radianceSphericalCoord
+            polar = view _x radianceSphericalCoord
+            w = cos polar * sin polar
+         in V4 x y z w
+   in map f hemi
 
 computeIrradiance :: Image PixelRGBF -> V3 Double -> V3 Double
 computeIrradiance img v =
@@ -113,8 +128,6 @@ v3ToRGBF v3 =
 
 theIrradianceImages equirect n = map (\square -> generateImage (\i j -> v3ToRGBF ((square !! j) !! i)) n n) (theIrradianceCube equirect n)
 
-makeFileName :: Int -> FilePath
-makeFileName i = show (cubicals !! i) ++ ".hdr"
 
 readHDRBytes =
   fromRight undefined
@@ -124,12 +137,3 @@ readHDRBytes =
                   _ -> undefined
               )
       )
-
-someFunc :: IO ()
-someFunc = do
-  imgBytes <- B.readFile "venetian_crossroads_1k.hdr"
-  let img = readHDRBytes imgBytes
-  let images = theIrradianceImages img 64
-  let aaa = iover each (\i a -> writeHDR (makeFileName i) a) images
-  bb <- sequence aaa
-  print bb
