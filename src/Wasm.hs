@@ -13,7 +13,8 @@ import Codec.Picture.Types
 import Codec.Picture
 import Data.Bson
 import Data.Bson.Binary
-import Data.Text (pack)
+import Data.Text (pack, toLower)
+import Optics
 
 -- import Asterius.Types
 -- import Asterius.ByteString
@@ -37,11 +38,12 @@ rotatedHemisphere a x y z =
 (.***) = (.) . (.) . (.)
 (.**) = (.) . (.)
 
-convertToPngCubeMap cubeMapSize hdrUInt8Array = 
+keyMaker = toLower . pack . show . (Lib.cubicals !!)
+convertToPngCubeMap cubeMapSize hdrUInt8Array =
    let hdrs = Lib.convertToCubeMap sampleEquirect cubeMapSize (byteStringFromJSUint8Array hdrUInt8Array)
        pngs = map (Binary . toStrict . encodePng . convertRGB8 . ImageRGBF . gammaCorrection 2.2 . toneMapping 2) hdrs
-       field = pack "pngs" := val pngs
-       aaa = toStrict $ runPut $ putDocument [field]
+       fields = iover each (\i a -> keyMaker i := val a) pngs
+       aaa = toStrict $ runPut $ putDocument fields
    in byteStringToJSUint8Array aaa
 
 -- foreign export javascript "rotatedHemisphere" rotatedHemisphere :: Int -> Double -> Double -> Double -> JSUint8Array
