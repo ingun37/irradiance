@@ -13,11 +13,14 @@ import Codec.Picture
 import Codec.Picture.Types
 -- import Optics (Each (each), iover, (%~), (&))
 
+import Codec.Picture.Types (gammaCorrection, toneMapping)
 import "lens" Control.Lens
 import Control.Monad
 import qualified Data.ByteString as B
 import Data.Either
 import Data.Ix
+import Data.Maybe (fromJust)
+import GHC.Err (undefined)
 import Linear.Metric
 import Linear.Quaternion
 import Linear.V2
@@ -25,7 +28,7 @@ import Linear.V3
 import Linear.V4
 import Linear.Vector
 import Util
-import Codec.Picture.Types (gammaCorrection, toneMapping)
+import Codec.Picture (generateFoldImage)
 
 tau = pi * 2
 
@@ -93,23 +96,30 @@ rotatedHemisphere segments v =
          in V4 x y z w
    in map f hemi
 
-computeIrradiance :: Int -> Image PixelRGBF -> V3 Double -> V3 Double
-computeIrradiance n img v =
-  let hemi = sphericalHemiSphere n
-      hemiLen = length hemi
-      rotator = rotate (rotationFromAVectorToAnother (V3 0 1 0) v)
-      radiances =
-        map
-          ( \scoord ->
-              let vec = rotator ((physicsCoord2GraphicsCoord . sphericalToPhysicsCoord) scoord)
-                  sampled = sampleEquirect img vec
-                  (V2 fcoordX fcoordY) = scoord
-                  polar = fcoordX
-               in sampled ^* cos polar ^* sin polar
-          )
-          hemi
-      irradiance = sumV radiances ^/ fromIntegral hemiLen
-   in irradiance ^* pi
+computeIrradiance segments img v =
+  let hemi = rotatedHemisphere segments v
+      num = length hemi
+      sampler = sampleEquirect img
+      radiances = map (\v4 -> sampler (v4 ^. _xyz) ^* (v4 ^. _w)) hemi
+   in sumV radiances ^/ fromIntegral num
+
+-- computeIrradiance :: Int -> Image PixelRGBF -> V3 Double -> V3 Double
+-- computeIrradiance n img v =
+--   let hemi = sphericalHemiSphere n
+--       hemiLen = length hemi
+--       rotator = rotate (rotationFromAVectorToAnother (V3 0 1 0) v)
+--       radiances =
+--         map
+--           ( \scoord ->
+--               let vec = rotator ((physicsCoord2GraphicsCoord . sphericalToPhysicsCoord) scoord)
+--                   sampled = sampleEquirect img vec
+--                   (V2 fcoordX fcoordY) = scoord
+--                   polar = fcoordX
+--                in sampled ^* cos polar ^* sin polar
+--           )
+--           hemi
+--       irradiance = sumV radiances ^/ fromIntegral hemiLen
+--    in irradiance ^* pi
 
 -- hemi = map (sample img . rotator) (hemiSphere 10)
 -- sum = sumV hemi
@@ -124,7 +134,12 @@ v3ToRGBF v3 =
   let V3 x y z = realToFrac <$> v3
    in PixelRGBF x y z
 
-convertLinearToImage n square = generateImage (\i j -> v3ToRGBF ((square !! j) !! i)) n n
+folder :: [V3 Double] -> Int -> Int -> ([V3 Double], PixelRGBF)
+folder vs i j =
+  let (head, tail) = fromJust $ uncons vs
+   in (tail, v3ToRGBF head)
+
+convertLinearToImage n square = generateFoldImage folder square n n
 
 readHDRBytes =
   fromRight undefined
@@ -139,5 +154,4 @@ convertToCubeMap strategy cubeMapSize hdrBytes =
   let v3Cube = normalizedV3Cube cubeMapSize
       img = readHDRBytes hdrBytes
       v3Cube' = map (map (map (strategy img))) v3Cube
-   in map (convertLinearToImage cubeMapSize) v3Cube'
-
+   in map (snd . convertLinearToImage cubeMapSize . join) v3Cube'

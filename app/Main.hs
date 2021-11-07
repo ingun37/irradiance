@@ -1,6 +1,6 @@
 module Main where
 
-import Lib (convertToCubeMap, cubicals)
+import Lib
 import Util (sampleEquirect)
 import qualified Data.ByteString as B
 import Codec.Picture
@@ -17,7 +17,9 @@ main = do
   -- let images = theIrradianceImages img 64
   -- let aaa = iover each (\i a -> writeHDR (makeFileName i) a) images
   -- bb <- sequence aaa
-  let images = convertToCubeMap sampleEquirect 64 imgBytes
+  -- let strategy = sampleEquirect
+  let strategy = computeIrradiance 30
+  let images = convertToCubeMap strategy 32 imgBytes
   let aaa = iover each (\i a -> writeHDR (makeFileName i) a) images
   bb <- sequence aaa
   print bb

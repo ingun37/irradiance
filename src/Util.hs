@@ -38,7 +38,7 @@ sphericalHemiSphere step = do
   let delta = tau / fromIntegral circumStep
   i <- range (0, circumStep -1)
   let azimuth = fromIntegral i * delta
-  j <- range (0, step -1)
+  j <- range (1, step -1)
   let polar = fromIntegral j * delta
   return $ V2 polar azimuth
 
